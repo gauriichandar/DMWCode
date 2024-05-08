@@ -1,0 +1,71 @@
+#importing pandas libraries
+import pandas as pd
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from google.colab import files
+uploaded = files.upload()
+
+
+data = pd.read_csv('cough_dataset.csv')
+data
+
+# a) Find Missing Values and replace them with suitable alternatives
+missing_values = data.isnull().sum()
+print("Missing Values:\n", missing_values)
+
+# b) Remove inconsistency
+# You need to define the inconsistency based on your dataset. For example, removing duplicates.
+data.drop_duplicates(inplace=True)
+
+# c) Prepare boxplot analysis for each numerical attribute and find outliers
+# Boxplot analysis
+numerical_cols = data.select_dtypes(include=np.number).columns
+for col in numerical_cols:
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x=data[col])
+    plt.title(f'Boxplot of {col}')
+    plt.show()
+
+# Detect outliers using IQR method
+Q1 = data[numerical_cols].quantile(0.25)
+Q3 = data[numerical_cols].quantile(0.75)
+IQR = Q3 - Q1
+outliers = ((data[numerical_cols] < (Q1 - 1.5 * IQR)) | (data[numerical_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+outlier_data = data[outliers]
+
+# d) Draw histogram for any two suitable attributes
+plt.figure(figsize=(10, 6))
+plt.hist(data['file'], bins=20, color='skyblue', edgecolor='black')
+plt.xlabel('file')
+plt.ylabel('Frequency')
+plt.title('Histogram of file')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.hist(data['status'], bins=20, color='salmon', edgecolor='black')
+plt.xlabel('status')
+plt.ylabel('Frequency')
+plt.title('Histogram of status')
+plt.show()
+
+# e) Find data type of each column
+data_types = data.dtypes
+print("\nData Types:\n", data_types)
+
+# f) Finding out Zeros
+zero_counts = (data == 0).sum()
+print("\nZero Counts:\n", zero_counts)
+
+
+# g) Find Mean status of patients
+data['status'] = data['status'].replace({'covid': 1, 'not_covid': 0})
+mean_age = data['status'].mean()
+print("\nMean status of Patients:", mean_age)
+
+# h) Find shape of data
+data_shape = data.shape
+print("\nData Shape:", data_shape)
+
