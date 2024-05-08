@@ -1,0 +1,106 @@
+#Construct an FP-tree
+!pip install mlxtend
+!pip install apyori graphviz
+
+import pandas as pd
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori
+from mlxtend.frequent_patterns import fpgrowth
+import graphviz
+
+#create a sample dataset
+
+data=[['Lily','Rose','Tulip'],
+      ['Rose','Mogra'],
+      ['Tulip','Rose','Mogra'],
+      ['Jasmine','Tulip','Rose','Mogra','Lily'],
+      ['Lily','Rose'],
+      ['Jasmine','Tulip'],
+      ['Mogra','Rose','Jasmine'],
+      ['Tulip','Mogra','Lily']
+]
+
+df = pd.DataFrame(data, columns=['Item1', 'Item2', 'Item3', 'Item4','Item5'])
+
+#Convert the dataset to a transaction format:
+te = TransactionEncoder()
+te_ary = te.fit(data).transform(data)
+df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+df_encoded
+
+#Apply the Apriori algorithm:
+frequent_itemsets_apriori = apriori(df_encoded, min_support=0.25, use_colnames=True)
+frequent_itemsets_apriori
+
+#Apply the FP-growth algorithm:
+frequent_itemsets_fpgrowth = fpgrowth(df_encoded, min_support=0.25, use_colnames=True)
+frequent_itemsets_fpgrowth
+
+# Construct FP Tree
+class Node:
+    def __init__(self, item, count, parent):
+        self.item = item  # Item name
+        self.count = count  # Count of occurrences of the item
+        self.parent = parent  # Reference to the parent node
+        self.children = {}  # Dictionary to store references to children nodes
+
+def build_tree(data, min_support):
+    header_table = {}
+    for index, row in data.iterrows():
+        for item in row:
+            header_table[item] = header_table.get(item, 0) + 1
+
+    for k in list(header_table):
+        if header_table[k] < min_support:
+            del header_table[k]
+
+    frequent_items = list(header_table.keys())
+    frequent_items.sort(key=lambda x: header_table[x], reverse=True)
+
+    root = Node("Null", 1, None)
+
+    for index, row in data.iterrows():
+        ordered_items = [item for item in frequent_items if item in row]
+        if ordered_items:
+            insert_tree(ordered_items, root, header_table, 1)
+
+    # Ensure 'Null' is in header_table
+    if 'Null' not in header_table:
+        header_table['Null'] = (0, None)
+
+    return root, header_table
+
+# Re-run the FP-tree construction
+root, header_table = build_tree(df_encoded, min_support=2)
+
+
+
+# Build the FP-tree
+root, header_table = build_tree(df_encoded, min_support=2)
+# Visualize the FP-tree
+def display_tree(node, depth=0):
+    if node is not None:
+        print('  ' * depth, node.item, '(', node.count, ')')
+        for child_key, child_node in node.children.items():
+            display_tree(child_node, depth + 1)
+
+# Display the FP-tree
+print("FP-Tree:")
+display_tree(root)
+
+
+# Visualize the FP-tree
+def visualize_tree(node, graph, parent_name, graph_name):
+    if node is not None:
+        graph.node(graph_name, f"{node.item} ({node.count})", shape="box")
+        if parent_name is not None:
+            graph.edge(parent_name, graph_name)
+        for child_key, child_node in node.children.items():
+            visualize_tree(child_node, graph, graph_name, f"{graph_name}_{child_key}")
+
+# Create a graph using Graphviz
+fp_tree_graph = graphviz.Digraph('FP_Tree', node_attr={'shape': 'box'}, graph_attr={'rankdir': 'TB'})
+visualize_tree(root, fp_tree_graph, None, 'Root')
+# Display the FP-tree visualization
+fp_tree_graph.render(filename='fp_tree_visualization', format='png', cleanup=True)
+fp_tree_graph
